@@ -1,0 +1,1257 @@
+# Project: Intelligent Manuscript HTR/OCR and Advanced Research Assistant
+## Backend and Artificial Intelligence Development Specification
+
+You are a senior Python backend engineer, AI/ML engineer, computer vision specialist, and database architect.
+
+Your task is to design and implement a complete, production-oriented backend for an intelligent web-based research platform that can recognize, transcribe, organize, and search historical Persian and Arabic handwritten manuscripts written in traditional Islamic calligraphic styles.
+
+The system must provide two primary user experiences:
+
+1. Manuscript Image Recognition (HTR/OCR)
+2. Advanced Manuscript Search and AI Research Assistant
+
+The application must also provide a conversational interface that allows users to interact with the system naturally, ask follow-up questions, and receive answers based on actual manuscript data.
+
+Do not build a mock application. Implement real backend logic, real database models, real API endpoints, and a modular AI architecture.
+
+---
+
+# 1. Main Project Objectives
+
+The backend must support the following capabilities:
+
+### A. Manuscript Image Recognition
+
+Users can upload an image of a historical manuscript page.
+
+The system must:
+
+- Accept JPG, JPEG, PNG, and TIFF images.
+- Validate file type, file size, and image dimensions.
+- Store the original image.
+- Preprocess the image before recognition.
+- Detect and optionally segment text regions and lines.
+- Recognize handwritten Persian and Arabic text using an HTR/OCR model.
+- Return the recognized text.
+- Return confidence information when supported by the model.
+- Support correction of incorrectly recognized text.
+- Allow users to save the corrected transcription.
+- Associate every transcription with its original image, manuscript, book, and page when available.
+- Preserve the original recognition result and the user's corrected version separately.
+- Support asynchronous processing for large images.
+
+The system must not pretend that OCR results are always correct.
+
+If recognition confidence is low, the interface must receive a warning and indicate that human verification is required.
+
+### B. Advanced Manuscript Search
+
+Users must be able to search through the stored manuscript collection using:
+
+- Book title
+- Author name
+- Manuscript title
+- Page number
+- Exact text
+- Partial text
+- Persian and Arabic words
+- Phrase search
+- Semantic search
+- Contextual search
+- Combined filters
+
+The search engine must support both lexical and semantic retrieval.
+
+The system must be capable of finding relevant passages even when the user's query is expressed differently from the original manuscript text.
+
+For example:
+
+A user searches for:
+"دانش پزشکی در تمدن اسلامی"
+
+The system should be able to retrieve relevant manuscript passages discussing medicine, physicians, and medical knowledge, even if the exact phrase does not exist in the manuscript.
+
+All search results must include source references such as book title, author, page number, and the matching text.
+
+### C. AI Research Assistant
+
+Provide a chat-oriented backend that supports two distinct conversation modes:
+
+- OCR Mode: image-to-text recognition and transcription correction.
+- Research Mode: advanced search and question answering over manuscript data.
+
+The assistant must maintain conversation history and support follow-up questions.
+
+It must never invent manuscript quotations, page numbers, authors, or book information.
+
+All factual answers about manuscripts must be grounded in retrieved database records.
+
+---
+
+# 2. Required Technology Stack
+
+Use the following technologies:
+
+Backend:
+- Python 3.12+
+- FastAPI
+- Pydantic v2
+- SQLAlchemy 2.0
+- Alembic
+- PostgreSQL
+- pgvector
+- Redis
+- Celery
+- Uvicorn
+
+AI and Computer Vision:
+- PyTorch
+- Hugging Face Transformers
+- OpenCV
+- Pillow
+- NumPy
+- Transformers-compatible HTR model adapters
+- Sentence Transformers or another compatible multilingual embedding framework
+
+Storage:
+- Local filesystem storage for development
+- S3-compatible storage abstraction for future MinIO integration
+
+Testing:
+- Pytest
+- HTTPX
+- pytest-asyncio
+
+Deployment:
+- Docker
+- Docker Compose
+
+Use clean architecture, dependency injection, modular services, type hints, structured logging, and environment-based configuration.
+
+Do not tightly couple the application to one OCR model or one embedding model.
+
+---
+
+# 3. System Architecture
+
+Organize the backend into independent modules.
+
+Required architecture:
+
+app/
+  main.py
+  core/
+    config.py
+    database.py
+    security.py
+    logging.py
+    exceptions.py
+    dependencies.py
+
+  api/
+    v1/
+      router.py
+      endpoints/
+        auth.py
+        manuscripts.py
+        books.py
+        authors.py
+        uploads.py
+        ocr.py
+        transcriptions.py
+        search.py
+        chat.py
+        conversations.py
+        health.py
+
+  models/
+    user.py
+    manuscript.py
+    book.py
+    author.py
+    manuscript_page.py
+    transcription.py
+    chat.py
+    chat_message.py
+    dataset.py
+
+  schemas/
+    auth.py
+    manuscript.py
+    book.py
+    author.py
+    ocr.py
+    search.py
+    chat.py
+    transcription.py
+
+  services/
+    auth_service.py
+    manuscript_service.py
+    upload_service.py
+    transcription_service.py
+    search_service.py
+    chat_service.py
+    conversation_service.py
+
+  ai/
+    ocr/
+      base.py
+      model_registry.py
+      model_loader.py
+      inference.py
+      preprocessing.py
+      segmentation.py
+      postprocessing.py
+      confidence.py
+
+    embeddings/
+      base.py
+      embedding_service.py
+      model_loader.py
+
+    retrieval/
+      hybrid_search.py
+      reranker.py
+      context_builder.py
+
+    assistant/
+      assistant_engine.py
+      prompt_templates.py
+      answer_generator.py
+
+  workers/
+    celery_app.py
+    ocr_tasks.py
+    embedding_tasks.py
+
+  repositories/
+    manuscript_repository.py
+    transcription_repository.py
+    search_repository.py
+
+  storage/
+    base.py
+    local_storage.py
+    s3_storage.py
+
+  utils/
+    text_normalization.py
+    pagination.py
+    file_validation.py
+
+tests/
+migrations/
+scripts/
+models/
+uploads/
+docker-compose.yml
+Dockerfile
+.env.example
+requirements.txt
+README.md
+
+You may improve this structure if necessary, but maintain clear separation between API, business logic, database, AI models, and infrastructure.
+
+---
+
+# 4. Database Design
+
+Use PostgreSQL with SQLAlchemy 2.0 and Alembic.
+
+Enable the pgvector extension.
+
+Implement the following database entities.
+
+### Users
+
+Fields:
+- id
+- full_name
+- email
+- hashed_password
+- role
+- is_active
+- created_at
+- updated_at
+
+Roles:
+- ADMIN
+- RESEARCHER
+- USER
+
+### Authors
+
+Fields:
+- id
+- full_name
+- alternative_names
+- biography
+- birth_date (nullable)
+- death_date (nullable)
+- created_at
+- updated_at
+
+Support multiple historical spellings and alternative names.
+
+### Books
+
+Fields:
+- id
+- title
+- alternative_titles
+- author_id (nullable)
+- language
+- description
+- publication_period (nullable)
+- created_at
+- updated_at
+
+### Manuscripts
+
+Fields:
+- id
+- book_id (nullable)
+- title
+- author_id (nullable)
+- language
+- script_style (nullable)
+- description
+- source
+- collection_name (nullable)
+- catalog_reference (nullable)
+- created_at
+- updated_at
+
+A manuscript may be associated with a book, but this relationship must be optional.
+
+### ManuscriptPages
+
+Fields:
+- id
+- manuscript_id
+- page_number
+- image_path
+- image_metadata (JSON)
+- processing_status
+- created_at
+- updated_at
+
+The combination of manuscript_id and page_number should be unique when page_number is known.
+
+### Transcriptions
+
+Fields:
+- id
+- manuscript_page_id
+- original_recognized_text
+- corrected_text (nullable)
+- normalized_text
+- language
+- model_name
+- model_version
+- confidence_score (nullable)
+- recognition_metadata (JSON)
+- verification_status
+- created_by (nullable)
+- created_at
+- updated_at
+
+The original recognized text must never be overwritten when a correction is submitted.
+
+Verification statuses:
+- PENDING
+- VERIFIED
+- NEEDS_REVIEW
+
+### ChatConversations
+
+Fields:
+- id
+- user_id
+- title
+- mode
+- created_at
+- updated_at
+
+Modes:
+- OCR
+- RESEARCH
+
+### ChatMessages
+
+Fields:
+- id
+- conversation_id
+- role
+- content
+- metadata (JSON)
+- created_at
+
+Message roles:
+- USER
+- ASSISTANT
+- SYSTEM
+
+Store relevant source references, OCR job IDs, and search metadata in message metadata when applicable.
+
+### Embeddings
+
+Store vector representations of manuscript text chunks.
+
+Fields:
+- id
+- transcription_id
+- manuscript_page_id
+- chunk_index
+- chunk_text
+- normalized_text
+- embedding (pgvector)
+- metadata (JSON)
+- created_at
+
+Use a configurable embedding dimension based on the selected model.
+
+Do not hardcode a vector dimension that conflicts with the selected embedding model.
+
+### OCRJobs
+
+Fields:
+- id
+- manuscript_page_id (nullable)
+- uploaded_file_path
+- status
+- progress
+- error_message (nullable)
+- result (JSON, nullable)
+- created_at
+- started_at (nullable)
+- completed_at (nullable)
+
+Statuses:
+- QUEUED
+- PROCESSING
+- COMPLETED
+- FAILED
+
+Implement database relationships, foreign keys, indexes, constraints, and migration scripts.
+
+Important:
+- Add indexes for frequently queried metadata.
+- Add full-text search indexes for transcription text.
+- Add vector indexes for semantic retrieval.
+- Use appropriate Persian and Arabic text normalization.
+- Avoid duplicating large image binary data inside PostgreSQL.
+
+---
+
+# 5. HTR/OCR Engine
+
+This is one of the most important parts of the project.
+
+Implement a modular HTR/OCR engine.
+
+Do not assume that ordinary printed-text OCR can accurately recognize historical handwritten manuscripts.
+
+The system must support historical Persian and Arabic handwriting and Islamic calligraphic styles through a model-adapter architecture.
+
+### 5.1 Model Architecture
+
+Create a common abstract interface:
+
+HTRModel:
+- load_model()
+- predict(image)
+- predict_batch(images)
+- get_model_info()
+- is_loaded()
+
+Implement a model registry that allows switching between different HTR models through environment variables.
+
+The first supported implementation should use a compatible pretrained vision-encoder/text-decoder architecture, such as TrOCR, when a suitable checkpoint is available.
+
+If the selected checkpoint is not trained for Persian or Arabic handwriting, clearly identify this limitation.
+
+Do not claim language support based only on the architecture.
+
+Provide a clean adapter interface for future custom models trained specifically on Persian and Arabic manuscripts.
+
+The system must support:
+- CPU inference
+- CUDA GPU inference when available
+- Configurable batch size
+- Configurable maximum output length
+- Model device selection
+- Lazy model loading
+- Model caching
+
+Do not download a huge model automatically during every application startup.
+
+### 5.2 Image Preprocessing
+
+Use OpenCV and Pillow.
+
+Implement:
+- Image validation
+- Grayscale conversion
+- Noise reduction
+- Contrast enhancement
+- Adaptive thresholding
+- Deskewing
+- Resolution normalization
+- Optional background removal
+- Optional line segmentation
+
+Preprocessing must be configurable.
+
+Keep the original image unchanged.
+
+Store preprocessing settings in recognition metadata.
+
+Do not force aggressive binarization on every image because historical manuscripts may contain delicate ink and paper details.
+
+### 5.3 Text Segmentation
+
+Create a segmentation module that can:
+
+- Detect text regions.
+- Detect text lines when possible.
+- Preserve reading order.
+- Return bounding boxes.
+- Support right-to-left reading order.
+- Handle multiple lines and columns.
+
+If reliable segmentation is not available, the system should support whole-page inference through the model adapter.
+
+Do not fabricate bounding boxes.
+
+### 5.4 Recognition Output
+
+Return a structured result:
+
+{
+  "job_id": "uuid",
+  "status": "COMPLETED",
+  "text": "recognized manuscript text",
+  "language": "fa",
+  "model": {
+    "name": "model-name",
+    "version": "model-version"
+  },
+  "confidence": null,
+  "lines": [
+    {
+      "text": "recognized line",
+      "confidence": null,
+      "bounding_box": null
+    }
+  ],
+  "warnings": [],
+  "processing_time_ms": 0
+}
+
+Confidence must only be returned when the model provides a meaningful confidence calculation.
+
+Do not invent confidence percentages.
+
+### 5.5 Persian and Arabic Normalization
+
+Implement a dedicated normalization utility.
+
+Handle:
+- Arabic and Persian Yeh variants.
+- Arabic and Persian Kaf variants.
+- Tatweel.
+- Diacritics.
+- Unicode normalization.
+- Repeated whitespace.
+- Arabic presentation forms where appropriate.
+
+Preserve the original transcription.
+
+Maintain two text representations:
+1. Original text for historical fidelity.
+2. Normalized text for search and matching.
+
+Normalization must be configurable because diacritics and letter variations may be important in manuscript research.
+
+Do not silently remove meaningful characters from the original text.
+
+---
+
+# 6. Dataset Management and Model Training
+
+The project must support the future creation of a specialized dataset.
+
+Implement a dataset management module that supports:
+
+- Uploading manuscript images.
+- Adding correct transcription labels.
+- Associating labels with image IDs.
+- Recording language and script style.
+- Recording book, author, and page metadata.
+- Dataset versioning.
+- Train / validation / test splits.
+- Exporting datasets in JSONL or another documented format.
+- Dataset quality validation.
+
+Create a documented training pipeline using PyTorch and Hugging Face-compatible models.
+
+The pipeline should include:
+1. Dataset preparation.
+2. Image and label validation.
+3. Text tokenization.
+4. Model initialization.
+5. Fine-tuning.
+6. Validation.
+7. Checkpoint saving.
+8. Evaluation.
+9. Model version registration.
+
+Use CER (Character Error Rate) as a primary recognition metric.
+
+Also calculate WER (Word Error Rate).
+
+Evaluate Persian and Arabic datasets separately.
+
+Ensure that pages from the same manuscript are not unintentionally distributed across training and test sets in a way that causes data leakage.
+
+Training must be a separate script or worker process, not part of the normal API startup.
+
+Provide sample dataset formats and example training commands.
+
+If no real dataset is available, provide a clearly marked synthetic or demonstration dataset for software testing only. Never present synthetic data as historical manuscript data or as evidence of model accuracy.
+
+---
+
+# 7. Text Chunking and Embeddings
+
+Implement a text-processing pipeline for search.
+
+After a transcription is saved or corrected:
+
+1. Normalize the text.
+2. Split it into searchable chunks.
+3. Preserve page and manuscript references.
+4. Generate multilingual embeddings.
+5. Store embeddings in PostgreSQL using pgvector.
+6. Update the full-text search index.
+
+Chunking requirements:
+- Configurable chunk size.
+- Configurable overlap.
+- Avoid splitting text unnecessarily between logical sentences or paragraphs.
+- Preserve the source page number.
+- Preserve manuscript and book IDs.
+- Preserve original text for result display.
+
+Use a multilingual embedding model that supports both Persian and Arabic.
+
+The model must be configurable.
+
+Do not assume every multilingual model has equal Persian and Arabic performance.
+
+---
+
+# 8. Advanced Search Engine
+
+Implement hybrid search.
+
+The search engine must combine:
+
+### A. Metadata Search
+
+Search by:
+- Book title
+- Author
+- Manuscript
+- Page number
+- Language
+- Script style
+- Collection name
+
+### B. Full-Text Search
+
+Support:
+- Exact phrase search
+- Partial text search
+- Keyword search
+- Persian and Arabic normalization
+- Multiple search terms
+
+Use PostgreSQL full-text search and trigram or other appropriate indexing for substring and fuzzy matching.
+
+Do not assume PostgreSQL's default text search configuration is sufficient for Persian and Arabic.
+
+Implement custom normalization and indexing strategies.
+
+### C. Semantic Search
+
+Use pgvector to retrieve semantically related passages.
+
+### D. Hybrid Ranking
+
+Combine lexical relevance and vector similarity.
+
+Use a configurable ranking strategy.
+
+Optionally support reranking with a multilingual reranker.
+
+Return results with:
+- Matching text
+- Book title
+- Author
+- Manuscript title
+- Page number
+- Relevance score
+- Match type
+- Source IDs
+
+Never return a source reference that does not exist in the database.
+
+### Search API Example
+
+POST /api/v1/search
+
+Request:
+
+{
+  "query": "دانش پزشکی در تمدن اسلامی",
+  "mode": "hybrid",
+  "filters": {
+    "book_id": null,
+    "author_id": null,
+    "manuscript_id": null,
+    "page_number": null,
+    "language": null
+  },
+  "page": 1,
+  "page_size": 10
+}
+
+Response:
+
+{
+  "query": "دانش پزشکی در تمدن اسلامی",
+  "total": 25,
+  "results": [
+    {
+      "id": "result-id",
+      "text": "matching manuscript passage",
+      "book": {
+        "id": "book-id",
+        "title": "Book title"
+      },
+      "author": {
+        "id": "author-id",
+        "name": "Author name"
+      },
+      "manuscript": {
+        "id": "manuscript-id",
+        "title": "Manuscript title"
+      },
+      "page_number": 12,
+      "relevance_score": 0.91,
+      "match_type": "semantic"
+    }
+  ]
+}
+
+The values above are illustrative API examples, not real historical records.
+
+Implement pagination and stable sorting.
+
+---
+
+# 9. AI Research Assistant and RAG
+
+Implement a Retrieval-Augmented Generation architecture.
+
+The assistant must answer questions using retrieved manuscript passages.
+
+Workflow:
+
+1. Receive the user's message.
+2. Identify the conversation mode.
+3. Normalize the query.
+4. Retrieve relevant passages.
+5. Apply filters if provided.
+6. Rerank retrieved passages when configured.
+7. Build a context containing only retrieved source records.
+8. Generate a response using a configurable LLM provider.
+9. Attach source citations.
+10. Store the conversation message and references.
+
+### Answer Generation Rules
+
+The assistant must:
+- Answer in Persian by default.
+- Understand Persian and Arabic queries.
+- Preserve original Arabic and Persian quotations.
+- Distinguish direct quotations from generated explanations.
+- Include citations for factual manuscript claims.
+- Identify book, author, manuscript, and page whenever known.
+- Explicitly state when no reliable source was found.
+- Never invent page numbers or quotations.
+- Never claim that a manuscript contains something without a retrieved source.
+- Clearly distinguish historical manuscript content from modern AI interpretation.
+
+If no LLM API key is configured, the application must still support basic search and return retrieved results without pretending to generate an AI answer.
+
+Make the LLM provider configurable through environment variables.
+
+Do not hardcode a paid AI provider.
+
+Support an adapter architecture for external APIs and local models.
+
+### Context Management
+
+Support:
+- Conversation history.
+- Follow-up questions.
+- Conversation-specific retrieval.
+- Explicit search filters.
+- Context window limits.
+- Configurable maximum retrieved passages.
+
+Do not send the entire database to an LLM.
+
+Only send the most relevant retrieved passages.
+
+### Citation Format
+
+Every source must have a stable reference ID.
+
+Example:
+
+{
+  "answer": "متن پاسخ...",
+  "sources": [
+    {
+      "source_id": "source-123",
+      "book_title": "Book title",
+      "author_name": "Author name",
+      "manuscript_title": "Manuscript title",
+      "page_number": 12,
+      "excerpt": "Original manuscript passage"
+    }
+  ]
+}
+
+---
+
+# 10. Chat and Conversation Management
+
+The backend must support two modes.
+
+### OCR Mode
+
+The conversation accepts:
+- Image uploads.
+- OCR requests.
+- Recognition results.
+- User corrections.
+- Follow-up recognition requests.
+
+### Research Mode
+
+The conversation accepts:
+- Natural-language questions.
+- Search requests.
+- Search filters.
+- Follow-up questions.
+- Requests to explain retrieved passages.
+
+A conversation must have one primary mode.
+
+Messages must be stored in the database.
+
+The API should support streaming assistant responses using Server-Sent Events (SSE).
+
+Implement a clear event format, such as:
+
+- message_start
+- token
+- source
+- message_complete
+- error
+
+Do not send fake streaming tokens. If the configured model does not support streaming, use a normal response or a clearly documented non-streaming fallback.
+
+---
+
+# 11. REST API Specification
+
+All endpoints must use the prefix:
+
+/api/v1
+
+Implement the following endpoints.
+
+### Authentication
+
+POST /auth/register
+POST /auth/login
+POST /auth/refresh
+GET /auth/me
+
+Use secure password hashing and JWT authentication.
+
+### Manuscripts
+
+GET /manuscripts
+POST /manuscripts
+GET /manuscripts/{id}
+PUT /manuscripts/{id}
+DELETE /manuscripts/{id}
+
+### Books
+
+GET /books
+POST /books
+GET /books/{id}
+PUT /books/{id}
+DELETE /books/{id}
+
+### Authors
+
+GET /authors
+POST /authors
+GET /authors/{id}
+PUT /authors/{id}
+DELETE /authors/{id}
+
+### Pages and Uploads
+
+POST /uploads
+POST /manuscripts/{id}/pages
+GET /pages/{id}
+GET /pages/{id}/image
+
+### OCR
+
+POST /ocr/recognize
+GET /ocr/jobs/{job_id}
+POST /ocr/jobs/{job_id}/retry
+
+The recognition endpoint must support both asynchronous and, where appropriate, synchronous processing.
+
+### Transcriptions
+
+GET /transcriptions/{id}
+PUT /transcriptions/{id}
+POST /transcriptions/{id}/verify
+POST /transcriptions/{id}/reindex
+
+### Search
+
+POST /search
+GET /search/suggestions
+
+### Chat
+
+POST /chat/conversations
+GET /chat/conversations
+GET /chat/conversations/{id}
+DELETE /chat/conversations/{id}
+
+POST /chat/conversations/{id}/messages
+
+POST /chat/conversations/{id}/messages/stream
+
+### Dataset
+
+POST /datasets
+GET /datasets
+POST /datasets/{id}/items
+POST /datasets/{id}/export
+
+### System
+
+GET /health
+GET /health/ready
+GET /ai/models
+
+Use proper HTTP status codes, validation errors, and consistent response formats.
+
+Generate complete OpenAPI documentation through FastAPI.
+
+---
+
+# 12. Security and File Management
+
+Implement:
+- JWT authentication.
+- Role-based access control.
+- Password hashing using Argon2 or bcrypt.
+- File type validation.
+- File size limits.
+- Safe file naming.
+- Protection against path traversal.
+- Rate limiting for sensitive endpoints.
+- CORS configuration.
+- Secure environment variable handling.
+- Input validation.
+- Error handling without exposing internal stack traces.
+- Upload ownership and access checks.
+
+The original manuscript images must not be publicly accessible by default.
+
+Use controlled image access through authenticated API endpoints.
+
+Never store passwords, API keys, or secret tokens in source code.
+
+---
+
+# 13. Background Processing
+
+Use Celery and Redis for long-running tasks.
+
+Implement background jobs for:
+- OCR processing.
+- Image preprocessing.
+- Text segmentation.
+- Embedding generation.
+- Search indexing.
+- Dataset exports.
+
+Provide job status and progress information.
+
+Make jobs retryable.
+
+Avoid duplicate processing where possible.
+
+The API must remain responsive during OCR processing.
+
+Do not run heavy GPU inference directly inside ordinary HTTP request handlers.
+
+---
+
+# 14. Configuration
+
+Create a comprehensive .env.example.
+
+Include settings such as:
+
+APP_NAME
+APP_ENV
+DEBUG
+SECRET_KEY
+DATABASE_URL
+REDIS_URL
+CELERY_BROKER_URL
+CELERY_RESULT_BACKEND
+JWT_SECRET_KEY
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+UPLOAD_DIR
+MAX_UPLOAD_SIZE_MB
+OCR_MODEL_NAME
+OCR_MODEL_PATH
+OCR_DEVICE
+OCR_BATCH_SIZE
+EMBEDDING_MODEL_NAME
+EMBEDDING_DIMENSION
+LLM_PROVIDER
+LLM_API_KEY
+LLM_MODEL
+LLM_BASE_URL
+LLM_TIMEOUT
+VECTOR_SEARCH_ENABLED
+SEMANTIC_SEARCH_ENABLED
+CORS_ORIGINS
+
+Validate configuration on application startup.
+
+Provide sensible development defaults without using insecure production defaults.
+
+---
+
+# 15. Docker and Deployment
+
+Create:
+
+- Dockerfile for the backend.
+- Dockerfile or documented configuration for the Celery worker.
+- Docker Compose configuration.
+
+Services:
+- api
+- worker
+- postgres
+- redis
+
+Use persistent volumes for:
+- PostgreSQL data.
+- Uploaded manuscript images.
+- Model files.
+
+Support CPU-only development by default.
+
+Document optional NVIDIA GPU support separately.
+
+Provide:
+- Health checks.
+- Service dependencies.
+- Environment configuration.
+- Database migrations.
+- Startup instructions.
+
+Do not download models during every container startup.
+
+---
+
+# 16. Testing Requirements
+
+Implement real automated tests.
+
+Test:
+- Authentication.
+- Database models.
+- Manuscript CRUD.
+- Book and author CRUD.
+- Image upload validation.
+- OCR model adapter behavior.
+- OCR job processing.
+- Text normalization.
+- Transcription correction.
+- Embedding generation.
+- Hybrid search.
+- Search filters.
+- Chat conversation persistence.
+- Source citation generation.
+- Authorization and file access.
+
+Use mock model adapters only in unit tests.
+
+Keep production AI logic separate from test mocks.
+
+Include integration tests for PostgreSQL and Redis where practical.
+
+---
+
+# 17. Development Rules
+
+Follow these rules strictly:
+
+1. Do not generate only an architectural explanation. Implement the actual application.
+2. Do not leave core features as TODO comments.
+3. Do not create fake OCR recognition logic.
+4. Do not return hardcoded manuscript results from search endpoints.
+5. Do not generate fabricated historical books, authors, or manuscript quotations.
+6. Clearly distinguish demonstration data from real manuscript data.
+7. Use modular and reusable code.
+8. Add type hints and docstrings.
+9. Use database migrations instead of relying on automatic table creation in production.
+10. Implement consistent error handling.
+11. Keep OCR, embedding, search, and LLM components replaceable.
+12. Do not assume a GPU is available.
+13. Keep the application functional even when the LLM provider is unavailable.
+14. Document every environment variable and API endpoint.
+15. Ensure the backend can run independently from the frontend.
+
+---
+
+# 18. Expected Deliverables
+
+Deliver a complete backend repository containing:
+
+1. Full Python source code.
+2. FastAPI application.
+3. SQLAlchemy database models.
+4. Alembic migrations.
+5. Authentication and authorization.
+6. Manuscript, book, and author management.
+7. Image upload and storage.
+8. Modular HTR/OCR engine.
+9. OCR background jobs.
+10. Transcription correction workflow.
+11. Dataset management and training scripts.
+12. Embedding generation pipeline.
+13. PostgreSQL hybrid search.
+14. RAG-based research assistant.
+15. Chat and conversation management.
+16. SSE streaming support.
+17. Docker and Docker Compose files.
+18. Automated tests.
+19. .env.example.
+20. Complete README.
+
+---
+
+# 19. Implementation Order
+
+Implement the project in the following order:
+
+Phase 1: Project initialization, configuration, database, migrations, and Docker.
+
+Phase 2: Authentication, users, authors, books, manuscripts, and pages.
+
+Phase 3: Image upload, storage, preprocessing, OCR model interface, and OCR job processing.
+
+Phase 4: Transcription management, correction, and verification.
+
+Phase 5: Dataset management, embedding generation, and indexing.
+
+Phase 6: Metadata search, full-text search, semantic search, and hybrid ranking.
+
+Phase 7: RAG assistant, conversation management, source citations, and SSE.
+
+Phase 8: Automated tests, documentation, deployment, and optimization.
+
+Do not skip phases.
+
+---
+
+# 20. Final Acceptance Criteria
+
+The backend is considered complete only when the following workflows work:
+
+Workflow A — OCR:
+
+1. A user logs in.
+2. The user creates an OCR conversation.
+3. The user uploads a manuscript image.
+4. The backend stores the original image.
+5. The OCR job is created.
+6. The image is preprocessed.
+7. The configured HTR model processes the image.
+8. The recognized text is returned.
+9. The user can correct the transcription.
+10. The corrected transcription is saved without overwriting the original result.
+11. The transcription can be indexed for search.
+
+Workflow B — Advanced Search:
+
+1. A researcher enters a Persian or Arabic query.
+2. The backend normalizes the query.
+3. Metadata filters are applied.
+4. Full-text and semantic search are executed.
+5. Relevant passages are ranked.
+6. Results include the original text and manuscript references.
+7. Pagination works correctly.
+
+Workflow C — Research Assistant:
+
+1. A user opens a Research conversation.
+2. The user asks a natural-language question.
+3. The retrieval engine finds relevant passages.
+4. The LLM generates an answer using only the retrieved context.
+5. The response includes source references.
+6. The user asks a follow-up question.
+7. The system maintains conversation context.
+8. The system never fabricates source information.
+
+Before finishing, provide:
+- A complete repository structure.
+- Installation instructions.
+- Environment configuration instructions.
+- Database migration commands.
+- Model configuration instructions.
+- Training instructions.
+- Docker deployment instructions.
+- API examples.
+- Test execution instructions.
+
+If any real model, dataset, external LLM provider, or hardware dependency is unavailable, implement the correct integration interface, document the missing dependency, and provide a functional fallback where possible.
+
+The final result must be a working, extensible backend suitable for a university research project and future real-world development.
